@@ -1,0 +1,8 @@
+---
+title: "SIM - Project Exercise"
+author: "Míriam Méndez, Gabriel Zarate"
+date: "Nov 7th, 2022"
+output: word_document
+editor_options: 
+  chunk_output_type: console
+---
