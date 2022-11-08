@@ -1,8 +1,9 @@
 ---
-title: "SIM - Project Exercise"
+title: "SIM - Assignment 1"
 author: "Míriam Méndez, Gabriel Zarate"
-date: "Nov 7th, 2022"
-output: word_document
+date: \today
+output: pdf_document
+subtitle: "Medical cost"
 editor_options: 
   chunk_output_type: console
 ---
@@ -12,7 +13,7 @@ editor_options:
 ```{r}
 # Load Required Packages: to be increased over the course
 
-requiredPackages <- c("missMDA","effects","FactoMineR","car","factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","chemometrics","rpart","ROCR","corrr","readxl","RColorBrewer","ggplot2","corrplot","plotly","xlsx","reshape2","scales","stargazer","kableExtra")
+requiredPackages <- c("missMDA","effects","FactoMineR","car","factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","chemometrics","rpart","ROCR","corrr","readxl","RColorBrewer","psych","corrplot","plotly","xlsx","reshape2","scales","stargazer","kableExtra")
 
 package.check <- lapply(requiredPackages, FUN = function(x) {
   if (!require(x, character.only = TRUE)) {
@@ -31,9 +32,9 @@ summary(df)
 View(df)
 ```
 
-**Data Preparation**
+# Data Preparation
 
-Remove duplicates
+## Remove duplicates
 
 ```{r}
 df[duplicated(df), ]
@@ -43,13 +44,13 @@ df <- df[!duplicated(df), ]
 nrow(df)
 ```
 
-Fixing Structural Errors
+## Fixing Structural Errors
 
 ```{r}
 
 ```
 
-Check Data Types
+## Check Data Types
 
 ```{r}
 lapply(df, class)
@@ -180,3 +181,56 @@ df[c(117,287,402,544,847,860,1087,1316),]
 df <- df[-c(847,1316),]
 
 ```
+
+# Second part
+
+## Create factors for qualitative variables [Done]
+
+```{r}
+summary(df)
+
+```
+
+## Determine if the response variable (charges) has an acceptably normal distribution
+
+The distribution of charges is right-skewed. We can confirm this visually using a histogram:
+
+```{r}
+hist(df$charges)
+```
+
+It does not have an acceptable normal distribution. Most of the individuals spend between \$0 and \$15,000 on health insurance, although the tail of the distribution extends far these peaks.
+
+## Address test to discard serial correlation ?
+
+```{r}
+# correlation matrix
+cor(df[c(1,3,4,7)])
+
+# autocorrelation
+acf(df$charges)
+
+# Durbin-Watson Test for serial correlation
+dwtest(df$charge ~ 1)
+
+```
+
+Non of the correlations in the matrix are considered strong, whereas all have a positive correlation, meaning that as *feature 1* increase, *feature 2* also increase.
+
+The autocorrelation is significantly different from zero at 5% level and we can see that there are periods of low and high variance.
+
+## Detect univariant and multivariant outliers [Done]
+
+## Preliminary exploratory analysis
+
+```{r}
+pairs.panels(df[c(1,3,4,7)])
+```
+
+In these scatter plots we have found interesting relationships between:
+
+-   *age* and *charges* : displays several relatively straight lines.
+
+-   *bmi* and *charges*: has two distinct groups of points.
+
+-   
