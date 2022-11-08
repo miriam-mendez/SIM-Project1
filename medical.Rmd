@@ -13,7 +13,7 @@ editor_options:
 ```{r}
 # Load Required Packages: to be increased over the course
 
-requiredPackages <- c("missMDA","effects","FactoMineR","car","factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","chemometrics","rpart","ROCR","corrr","readxl","RColorBrewer","psych","corrplot","plotly","xlsx","reshape2","scales","stargazer","kableExtra")
+requiredPackages <- c("missMDA","effects","FactoMineR","car","factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","chemometrics","rpart","ROCR","corrr","readxl","RColorBrewer","psych","corrplot","plotly","xlsx","reshape2","scales","stargazer","kableExtra","lmtest")
 
 package.check <- lapply(requiredPackages, FUN = function(x) {
   if (!require(x, character.only = TRUE)) {
@@ -21,6 +21,7 @@ package.check <- lapply(requiredPackages, FUN = function(x) {
     library(x, character.only = TRUE)
   }
 })
+
 ```
 
 *Reading Data*
@@ -90,10 +91,10 @@ abline(h=utsi2,col="red",lwd=3)
 abline(h=utmo2,col="green",lwd=3)
 abline(h=utmi2,col="green",lwd=3)
 
-lls<-which((df$bmi>utso2)|(df$bmi<utsi2));lls
-df[lls,]
-llm<-which((df$bmi>utmo2)|(df$bmi<utmi2));llm
-df[llm,]
+lls.bmi<-which((df$bmi>utso2)|(df$bmi<utsi2));lls
+df[lls.bmi,]
+llm.bmi<-which((df$bmi>utmo2)|(df$bmi<utmi2));llm
+df[llm.bmi,]
 
 par(mfrow=c(1,1))
 
@@ -135,16 +136,12 @@ mis_col = colSums(is.na(df))
 mis_col
 
 #Only charges has missing data (outliers)
-imres<-imputePCA(df[c(1,3,4,7)])
-names(imres)
 
-#Imputated Data Validation
-imres$completeObs[lls,"charges"]
-par(mfrow=c(1,2))
-Boxplot(imres$completeObs[,"charges"])
-Boxplot(df$charges)
+#They can't be imputed because it is the target variable, so they are deleted
 
-df[lls,"charges"]<-imres$completeObs[lls,"charges"]
+md<-which(is.na(df$charges));md
+df <- df[-md,]
+nrow(df)
 
 ```
 
@@ -174,11 +171,11 @@ Data Validation
 summary(df)
 
 #Checking bmi mild outliers
-df[c(117,287,402,544,847,860,1087,1316),]
+df[llm.bmi,]
 
 #There are two cases we have decided to delete because they aren't common, they are on the obbessity type IV, and have a really low age
 
-df <- df[-c(847,1316),]
+df <- df[-c(844,1309),]
 
 ```
 
@@ -189,6 +186,7 @@ df <- df[-c(847,1316),]
 ```{r}
 summary(df)
 
+str(df)
 ```
 
 ## Determine if the response variable (charges) has an acceptably normal distribution
@@ -196,16 +194,29 @@ summary(df)
 The distribution of charges is right-skewed. We can confirm this visually using a histogram:
 
 ```{r}
-hist(df$charges)
+
+#Normal Check
+hist(df$charges, freq=F, main="charges")
+curve(dnorm(x,mean(x),sd(x)),lwd=2,add=T,col="red")
+shapiro.test(df$charges)
+
+#Log normal check
+hist(log(df$charges), freq=F, main="charges")
+curve(dnorm(x,mean(x),sd(x)),lwd=2,add=T,col="red")
+shapiro.test(log(df$charges))
+
 ```
 
 It does not have an acceptable normal distribution. Most of the individuals spend between \$0 and \$15,000 on health insurance, although the tail of the distribution extends far these peaks.
 
-## Address test to discard serial correlation ?
+## Address test to discard serial correlation [falta]
+
+You have seen acf() method to plot autocorrelation in calories. The plot clearly shows a
+serial correlation. Durbin-Watson test is an inferential tool that addresses whether
+autocorrelation is present and the null hypothesis is clearly rejected, thus again,
+autocorrelation is present in the cal column of the pizza dataset.
 
 ```{r}
-# correlation matrix
-cor(df[c(1,3,4,7)])
 
 # autocorrelation
 acf(df$charges)
@@ -215,8 +226,6 @@ dwtest(df$charge ~ 1)
 
 ```
 
-Non of the correlations in the matrix are considered strong, whereas all have a positive correlation, meaning that as *feature 1* increase, *feature 2* also increase.
-
 The autocorrelation is significantly different from zero at 5% level and we can see that there are periods of low and high variance.
 
 ## Detect univariant and multivariant outliers [Done]
@@ -224,8 +233,11 @@ The autocorrelation is significantly different from zero at 5% level and we can 
 ## Preliminary exploratory analysis
 
 ```{r}
+
 pairs.panels(df[c(1,3,4,7)])
 ```
+
+Non of the correlations in the matrix are considered strong, whereas all have a positive correlation, meaning that as *feature 1* increase, *feature 2* also increase.
 
 In these scatter plots we have found interesting relationships between:
 
