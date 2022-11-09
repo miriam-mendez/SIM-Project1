@@ -91,9 +91,9 @@ abline(h=utsi2,col="red",lwd=3)
 abline(h=utmo2,col="green",lwd=3)
 abline(h=utmi2,col="green",lwd=3)
 
-lls.bmi<-which((df$bmi>utso2)|(df$bmi<utsi2));lls
+lls.bmi<-which((df$bmi>utso2)|(df$bmi<utsi2));lls.bmi
 df[lls.bmi,]
-llm.bmi<-which((df$bmi>utmo2)|(df$bmi<utmi2));llm
+llm.bmi<-which((df$bmi>utmo2)|(df$bmi<utmi2));llm.bmi
 df[llm.bmi,]
 
 par(mfrow=c(1,1))
@@ -170,13 +170,6 @@ Data Validation
 ```{r}
 summary(df)
 
-#Checking bmi mild outliers
-df[llm.bmi,]
-
-#There are two cases we have decided to delete because they aren't common, they are on the obbessity type IV, and have a really low age
-
-df <- df[-c(844,1309),]
-
 ```
 
 # Second part
@@ -211,10 +204,7 @@ It does not have an acceptable normal distribution. Most of the individuals spen
 
 ## Address test to discard serial correlation [falta]
 
-You have seen acf() method to plot autocorrelation in calories. The plot clearly shows a
-serial correlation. Durbin-Watson test is an inferential tool that addresses whether
-autocorrelation is present and the null hypothesis is clearly rejected, thus again,
-autocorrelation is present in the cal column of the pizza dataset.
+You have seen acf() method to plot autocorrelation in calories. The plot clearly shows a serial correlation. Durbin-Watson test is an inferential tool that addresses whether autocorrelation is present and the null hypothesis is clearly rejected, thus again, autocorrelation is present in the cal column of the pizza dataset.
 
 ```{r}
 
@@ -245,4 +235,45 @@ In these scatter plots we have found interesting relationships between:
 
 -   *bmi* and *charges*: has two distinct groups of points.
 
--   
+```{r}
+
+res.con <- condes( df, num.var=7, proba = 0.01 )
+res.con$quanti
+res.con$quali
+res.con$category
+```
+
+## Model
+
+```{r}
+names(df)
+
+summary(df)
+
+#First with only the numerical variables
+m0 <- lm(charges ~ age + bmi + children , data = df)
+
+summary(m0)
+
+#The intercept is difficult to intercept because it is impossible to have 0's for all values
+
+par( mfrow = c(2,2))
+plot(m0, id.n = 0)
+par( mfrow = c(1,1))
+
+cor(df[,c(1,3,4,7)])
+
+#Variance inflation factor
+vif(m0)
+
+
+library(MASS)
+
+boxcox( charges ~ age + bmi + children , data=df)
+
+boxCoxVariable( log(charges) ~ age + bmi + I(children+0.5) , data=df)
+
+boxTidwell( log(charges) ~ age + bmi + I(children+0.5) , data=df)
+
+boxTidwell( log(wage) ~ education + I(experience+0.5), data=df)
+```
