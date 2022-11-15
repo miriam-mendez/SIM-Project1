@@ -13,7 +13,7 @@ editor_options:
 ```{r}
 # Load Required Packages: to be increased over the course
 
-requiredPackages <- c("missMDA","effects","FactoMineR","car","factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","chemometrics","rpart","ROCR","corrr","readxl","RColorBrewer","psych","corrplot","plotly","xlsx","reshape2","scales","stargazer","kableExtra","lmtest")
+requiredPackages <- c("missMDA","effects","FactoMineR","car","factoextra","RColorBrewer","ggplot2","dplyr","ggmap","ggthemes","knitr","chemometrics","rpart","ROCR","corrr","readxl","RColorBrewer","psych","corrplot","plotly","xlsx","reshape2","scales","stargazer","kableExtra","lmtest","MASS","effects","car")
 
 package.check <- lapply(requiredPackages, FUN = function(x) {
   if (!require(x, character.only = TRUE)) {
@@ -30,7 +30,7 @@ package.check <- lapply(requiredPackages, FUN = function(x) {
 df <- read.csv("insurance.csv")
 summary(df)
 
-View(df)
+#View(df)
 ```
 
 # Data Preparation
@@ -61,7 +61,7 @@ lapply(df, class)
 
 ```
 
-Univariate Outliers
+## Univariate Outliers
 
 ```{r}
 par(mfrow=c(1,2))
@@ -129,7 +129,7 @@ df[lls,"charges"]<-NA
 summary(df$charges)
 ```
 
-Check missing data
+## Treating missing data
 
 ```{r}
 mis_col = colSums(is.na(df))
@@ -145,7 +145,7 @@ nrow(df)
 
 ```
 
-Multivariate Outliers
+## Multivariate Outliers
 
 ```{r}
 library(chemometrics)
@@ -165,7 +165,7 @@ df <- df[-llmout,]
 
 ```
 
-Data Validation
+## Data Validation
 
 ```{r}
 summary(df)
@@ -178,13 +178,14 @@ summary(df)
 
 ```{r}
 summary(df)
-
 str(df)
 ```
 
 ## Determine if the response variable (charges) has an acceptably normal distribution
 
-The distribution of charges is right-skewed. We can confirm this visually using a histogram:
+The distribution of charges is right-skewed. We can confirm this visually using a histogram and comparing it with a curve that represents a normal distribution, also the Shapiro Test was applied to check the normality of the distribution, getting a p-value lower that any acceptable alpha, rejecting the H0, so it does not has a normal distribution.
+
+Additionally, the normality of the logarithmic transformation of charge was tested, getting the same results by checking the histogram, comparing it with the curve, and by applying the Shapiro Test, rejecting the H0, so it does not has a log-normal distribution.
 
 ```{r}
 
@@ -202,9 +203,9 @@ shapiro.test(log(df$charges))
 
 It does not have an acceptable normal distribution. Most of the individuals spend between \$0 and \$15,000 on health insurance, although the tail of the distribution extends far these peaks.
 
-## Address test to discard serial correlation [falta]
+## Address test to discard serial correlation [Done]
 
-You have seen acf() method to plot autocorrelation in calories. The plot clearly shows a serial correlation. Durbin-Watson test is an inferential tool that addresses whether autocorrelation is present and the null hypothesis is clearly rejected, thus again, autocorrelation is present in the cal column of the pizza dataset.
+By using the acf() method to plot the autocorrelation in charges, it can be seen that there is no serial correlation in it. Also the Durbin-Watson Test was realized, and it gets a p-value = 0.53, so the H0 fails to be rejected, so it can be said that there is no autocorrelation present in charges.
 
 ```{r}
 
@@ -220,12 +221,9 @@ The autocorrelation is significantly different from zero at 5% level and we can 
 
 ## Detect univariant and multivariant outliers [Done]
 
-## Preliminary exploratory analysis
+Done in the preprocessing
 
-```{r}
-
-pairs.panels(df[c(1,3,4,7)])
-```
+## Preliminary exploratory analysis [Done]
 
 Non of the correlations in the matrix are considered strong, whereas all have a positive correlation, meaning that as *feature 1* increase, *feature 2* also increase.
 
@@ -234,6 +232,18 @@ In these scatter plots we have found interesting relationships between:
 -   *age* and *charges* : displays several relatively straight lines.
 
 -   *bmi* and *charges*: has two distinct groups of points.
+
+```{r}
+cor(df[c(7,1,3,4)])
+pairs.panels(df[c(7,1,3,4)])
+plot(df[c(7,1,3,4)])
+```
+
+Also checking the condes() function, we can see the following:
+
+-   With the numeric variables: There is small positive correlation with age, an smaller with bmi, and there is almost no correlation with children
+
+-   With the categorical: there is a moderately high coefficient of determination with smoker, so we can say that it is an influential variable
 
 ```{r}
 
@@ -245,35 +255,149 @@ res.con$category
 
 ## Model
 
+First with only the numerical variables
+
 ```{r}
-names(df)
 
-summary(df)
+#First we check if there is any likely relation with any variable
+par( mfrow = c(2,2))
+plot(df$charges ~ df$age)
+plot(df$charges ~ df$bmi)
+plot(df$charges ~ df$children)
+par( mfrow = c(1,1))
 
-#First with only the numerical variables
+#It seems that with age there might be and slight cuadratic relation
+m0a1 <- lm(charges ~ age, data = df)
+summary(m0a1)
+plot(df$charges ~ df$age)
+lines(df$age, fitted(m0a1), lty = 2,col="red")
+
+m0a2 <- lm(charges ~ age+ I(age^2), data = df)
+summary(m0a2)
+lines(df$age, fitted(m0a2), lty = 2,col="darkgreen")
+
+m0a3 <- lm(charges ~ I(age^2), data = df)
+summary(m0a3)
+lines(df$age, fitted(m0a3), lty = 2,col="pink")
+
+AIC(m0a1,m0a2,m0a3)
+
+#Seems that using a polinomic aproach in age it would work better
+
+#Now we check with bmi
+m0b <- lm(charges ~ bmi, data = df)
+summary(m0b)
+plot(df$charges ~ df$bmi)
+lines(df$bmi, fitted(m0b), lty = 2,col="red")
+#there seems to not be a pattern
+
+#Now we check with children
+m0c <- lm(charges ~ children, data = df)
+summary(m0c)
+plot(df$charges ~ df$children)
+lines(df$children, fitted(m0c), lty = 2,col="red")
+#there seems to not be a pattern
+```
+
+```{r}
+#Now we try all the numeric values
+
 m0 <- lm(charges ~ age + bmi + children , data = df)
-
 summary(m0)
 
-#The intercept is difficult to intercept because it is impossible to have 0's for all values
+#The intercept is difficult to interpret because it is impossible to have 0's for all values
 
 par( mfrow = c(2,2))
 plot(m0, id.n = 0)
 par( mfrow = c(1,1))
 
-cor(df[,c(1,3,4,7)])
 
 #Variance inflation factor
 vif(m0)
+boxcox( charges ~ age + bmi + children , data=df) #lambda = 0
+boxTidwell( charges ~ age + bmi + I(children+0.5) , data=df) #lambda age = 1.8
+boxTidwell( log(charges) ~ age + bmi + I(children+0.5) , data=df) #lambda age = 0.5
 
+# First we will try the polinomic convertion with age
 
-library(MASS)
+m1 <- lm(log(charges) ~ age + I(age^2) + bmi + I(children+0.5) , data = df)
+summary(m1) # R2 = 0.3081
 
-boxcox( charges ~ age + bmi + children , data=df)
+m2 <- lm(log(charges) ~  I(age^2) + bmi + I(children+0.5) , data = df)
+summary(m2) #R2 = 0.2946
 
-boxCoxVariable( log(charges) ~ age + bmi + I(children+0.5) , data=df)
+anova(m2,m1) # both models are not equivalent
 
-boxTidwell( log(charges) ~ age + bmi + I(children+0.5) , data=df)
+AIC(m1,m2) #m1 has the best AIC (3048.388)
 
-boxTidwell( log(wage) ~ education + I(experience+0.5), data=df)
+summary(m1)$r.squared 
+#So until now we keep m1, that has R2 =  0.3081237
+
 ```
+
+Now we check influential Data
+
+```{r}
+
+residualPlots( m1, id=list(n=5, labels=rownames(df)))
+marginalModelPlots(m1, id=list(n=5, labels=rownames(df)))
+
+#Potentially influent data
+
+#we use 2 because it is a small dataset
+llev <- which( hatvalues(m1) > 2*(length(coef(m1))/nrow(df)));llev
+length(llev)
+
+m3 <- lm(log(charges) ~  age + I(age^2) + bmi + I(children+0.5) , data = df[-llev,])
+summary(m3) # R2 = 0.3047
+
+residualPlots(m3)
+marginalModelPlots(m3, id=list(n=5, labels=rownames(df)))
+
+```
+
+```{r}
+# Threshold Chatterjee-Hadi
+thChH <- 4/ (nrow(df) - length(coef(m3)));thChH
+
+par(mfrow=c(1,1))
+influencePlot(m3)
+#All the cook distances from the values of the plot are small, comparing with thChH
+
+#Actual influent data Cook´s distance: outliers in cook´s distance
+Boxplot(cooks.distance(m3))
+abline(h=thChH,col="red",lwd=3)
+
+resout <- which( cooks.distance(m3) > thChH);resout
+length(resout)
+
+infres <- as.integer(c(llev,resout))
+infres <- sort(infres[!duplicated(infres)]); infres
+length(infres)
+
+# BORRAR?
+m4 <- lm(log(charges) ~  age + I(age^2) + bmi + I(children+0.5) , data = df[-infres,])
+summary(m4) # R2 = 0.3049
+residualPlots( m4)
+marginalModelPlots(m4, id=list(n=5, labels=rownames(df)))
+
+length(df[,1])
+length(df[-infres,1])
+```
+
+
+Residual Outliers
+```{r}
+
+```
+
+
+Adding factors
+
+```{r}
+names(df)
+m5 <- lm(log(charges) ~  age +I(age^2) + bmi + I(children+0.5) + sex + smoker + region, data = df[-llev,])
+summary(m5)
+
+```
+
