@@ -280,7 +280,7 @@ m0a3 <- lm(charges ~ I(age^2), data = df)
 summary(m0a3)
 lines(df$age, fitted(m0a3), lty = 2,col="pink")
 
-AIC(m0a1,m0a2,m0a3)
+AIC(m0a1,m0a2,m0a3, k=log(nrow(df)))
 
 #Seems that using a polinomic aproach in age it would work better
 
@@ -331,7 +331,7 @@ summary(m3) #R2 = 0.3085
 
 anova(m2,m1) # models are not equivalent
 
-AIC(m3,m2,m1) #m3 has the best AIC (3045.722)
+AIC(m3,m2,m1, k=log(nrow(df))) #m3 has the best AIC (3045.722)
 
 summary(m3)$r.squared 
 #So until now we keep m3, that has R2 =  0.30847
@@ -340,53 +340,50 @@ summary(m3)$r.squared
 
 Now we check influential Data
 
+Apriori influent data
+
 ```{r}
 
-residualPlots( m3, id=list(n=5, labels=rownames(df)))
-marginalModelPlots(m3, id=list(n=5, labels=rownames(df)))
-
-#Potentially influent data 
-
-#Checking hat values > 2 *(p/n) : for small datasets
+residualPlots( m1, id=list(n=5, labels=rownames(df)))
+marginalModelPlots(m1, id=list(n=5, labels=rownames(df)))
 
 #we use 2 because it is a small dataset
-llev <- which( hatvalues(m3) > 2*(length(coef(m3))/nrow(df)));llev
-length(llev) #59
+llev <- which( hatvalues(m1) > 2*(length(coef(m1))/nrow(df)));llev
+length(llev)
 
-m4 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5), data = df[-llev,])
-summary(m4) # R2 = 0.3144
+#We try a model without those values only to check, but it won't be kept
+m3 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) , data = df[-llev,])
+summary(m3) # R2 = 0.3051
 
-residualPlots(m4)
-marginalModelPlots(m4, id=list(n=5, labels=rownames(df)))
+residualPlots(m3)
+marginalModelPlots(m3, id=list(n=5, labels=rownames(df)))
 
 ```
 
+Aposteriori influent data
+
 ```{r}
 # Threshold Chatterjee-Hadi
-thChH <- 4/ (nrow(df) - length(coef(m4)));thChH
+thChH <- 4/ (nrow(df) - length(coef(m1)));thChH
 
 par(mfrow=c(1,1))
-influencePlot(m4)
-#All the cook distances from the values of the plot are small, comparing with thChH
+influencePlot(m1)
 
 #Actual influent data Cook´s distance: outliers in cook´s distance
-Boxplot(cooks.distance(m5))
+Boxplot(cooks.distance(m1))
 abline(h=thChH,col="red",lwd=3)
 
-resout <- which( cooks.distance(m5) > thChH);resout
-length(resout) #83
+resout <- which( cooks.distance(m1) > thChH);resout
+length(resout)
 
-infres <- as.integer(c(llev,resout))
-infres <- sort(infres[!duplicated(infres)]); infres
-length(infres) #139
-
-m5 <- lm(log(charges) ~   sqrt(age) + bmi + I(children+0.5) , data = df[-infres,])
-summary(m5) # R2 = 0.3157
-residualPlots( m5)
-marginalModelPlots(m5, id=list(n=5, labels=rownames(df)))
+# We try a model with no Cook's distance outliers
+m4 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) , data = df[-resout,])
+summary(m4) # R2 = 0.513
+residualPlots( m4)
+marginalModelPlots(m4, id=list(n=5, labels=rownames(df)))
 
 length(df[,1])
-length(df[-infres,1])
+length(df[-resout,1])
 ```
 
 
@@ -400,8 +397,8 @@ Adding factors
 
 ```{r}
 names(df)
-m6 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) + sex + smoker + region, data = df[-infres,])
-summary(m6) #R2 = 0.7642
+m6 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) + sex + smoker + region, data = df[-resout,])
+summary(m6) #R2 = 0.8275
 
 par(mfrow=c(2,2))
 plot(m6)
@@ -410,11 +407,11 @@ par(mfrow=c(1,1))
 Anova(m6)
 #all variables are important
 
-m7 <- step( m6)
+m7 <- step( m6, k=log(nrow(df)))
 #Step doesn't show any variable that can be deleted
 
 #But we try a model without region, because it is a multiclass
-m6reg <- lm(log(charges) ~   sqrt(age) + bmi + I(children+0.5) + sex + smoker,  data = df[-infres,])
+m6reg <- lm(log(charges) ~   sqrt(age) + bmi + I(children+0.5) + sex + smoker,  data = df[-resout,])
 summary(m6reg) 
 
 anova(m6reg, m6)
@@ -464,24 +461,24 @@ Recalculate the model
 ```{r}
 
 #Checking the change only in region
-m8 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-infres,])
-summary(m8) #R2 = 0.7634
+m8 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-resout,])
+summary(m8) #R2 = 0.8264
 
 #Checking the change in region and in bmi
-m9 <- lm(log(charges) ~  sqrt(age) + f.bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-infres,])
-summary(m9) #R2 = 0.7638
+m9 <- lm(log(charges) ~  sqrt(age) + f.bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-resout,])
+summary(m9) #R2 = 0.8261
 
-AIC(m9,m8,m7)
+AIC(m9,m8,m7, k=log(nrow(df)))
 
-#Comparing the models the m9 has the lower AIC(1465.319, so we decide to keep the two factor transformations for the model
+#Comparing the models the m8 has the lower BIC(1099.018), so we decide to keep only the region factor transformation for the model
 
-m10<- step(m9)
+m10<- step(m9, k=log(nrow(df)))
 #No changes
 
-residualPlots( m10)
-marginalModelPlots(m10, id=list(n=5, labels=rownames(df)))
+residualPlots( m9)
+marginalModelPlots(m9, id=list(n=5, labels=rownames(df)))
 par(mfrow=c(2,2))
-plot(m10)
+plot(m9)
 par(mfrow=c(1,1))
 
 ```
@@ -489,8 +486,8 @@ par(mfrow=c(1,1))
 Adding interactions
 
 ```{r}
-m11 <- lm(log(charges) ~  (sqrt(age) + I(children+0.5)) * (sex + smoker + f.reg + f.bmi), data = df[-llev,])
-summary(m11) #R2 = 0.8105
+m11 <- lm(log(charges) ~  (sqrt(age) +bmi+ I(children+0.5)) * (sex + smoker + f.reg), data = df[-resout,])
+summary(m11) #R2 = 0.8643
 
 residualPlots( m11)
 marginalModelPlots(m11, id=list(n=5, labels=rownames(df)))
@@ -500,15 +497,12 @@ par(mfrow=c(1,1))
 
 plot(allEffects(m11))
 
-m12 <- step(m11)
-summary(m12) # R2 = 0.8102
+m12 <- step(m11, k=log(nrow(df)))
+summary(m12) # R2 = 0.8632
 
-#lm(formula = log(charges) ~ sqrt(age) + log(I(children + 0.5)) + 
-#   sex + smoker + f.reg + f.bmi + sqrt(age):sex + sqrt(age):smoker + 
-#   sqrt(age):f.reg + sqrt(age):f.bmi + log(I(children + 0.5)):smoker, 
-#   data = df[-llev, ])
+#lm(formula = log(charges) ~ sqrt(age) + bmi + I(children + 0.5) + sex + smoker + f.reg + sqrt(age):sex + sqrt(age):smoker + sqrt(age):f.reg + bmi:smoker + data = df[-resout, ])
 
-AIC(m12,m11)
+AIC(m12,m11, k=log(nrow(df)))
 
 marginalModelPlots(m12)
 par(mfrow=c(2,2))
