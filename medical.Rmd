@@ -399,5 +399,122 @@ names(df)
 m5 <- lm(log(charges) ~  age +I(age^2) + bmi + I(children+0.5) + sex + smoker + region, data = df[-llev,])
 summary(m5)
 
+par(mfrow=c(2,2))
+plot(m5)
+par(mfrow=c(1,1))
+
+Anova(m5)
+#all variables are important
+
+plot(allEffects(m5))
+m6 <- step( m5)
+
+#Step doesn't show any variable that can be deleted
+
+#But we try a model without region, because it is a multiclass
+m5reg <- lm(log(charges) ~  age +I(age^2) + bmi + I(children+0.5) + sex + smoker,  data = df[-llev,])
+summary(m5reg)
+
+anova(m5reg, m5)
+#Ho rejected, so models are not equivalent, so we can not delete region
+
 ```
 
+Redefining factors
+
+```{r}
+
+#First we check how to regroup region
+plot(df$charges ~ df$region)
+tapply(df$charges, df$region, summary)
+
+#According to the distributions by each group the south seems to have a common distribution by checking the min value, the median and the max, and the same with the north, so we will group them by north and south
+
+df$f.reg<-0
+ll<-which(df$region %in% c("northeast","northwest"))
+df$f.reg[ll]<-1
+df$f.reg <- factor( df$f.reg, labels=c("south","north"))
+
+table(df$region)
+table(df$f.reg)
+
+
+#Also it was decided to check bmi to see if it can become a factor
+
+summary(df$bmi)
+summary(df$charges)
+
+plot(df$charges ~ df$bmi)
+abline( h=30000, lwd=2, col="red")
+abline( v=30, lwd=2, col="red")
+
+#As we can see in the distribution ob charges, the 3rd Qu. IS 16390, so above that we can consider expensive charges, so we decided to draw a line in charges of 30000, almost the double of the 3rd Qu. and it can be seen that approximately in bmi's higher than 30 it starts to be more frequent, so it was finally decided to create a factor that indicates if the individual has a bmi higher or equal than 30 or not
+
+df$f.bmi<-0
+ll<-which(df$bmi >= 30)
+df$f.bmi[ll]<-1
+df$f.bmi <- factor( df$f.bmi, labels=c("<30",">=30"))
+
+```
+
+Recalculate the model
+
+```{r}
+m6 <- lm(log(charges) ~  age +I(age^2) + bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-llev,])
+summary(m6)
+
+m7 <- lm(log(charges) ~  age +I(age^2) + f.bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-llev,])
+summary(m7)
+
+AIC(m5,m6,m7)
+
+#Comparing the models the m7 has the lower AIC(1547.154), so we decide to keep the two factor transformations for the model
+# m7 R2= 0.7634
+
+m8<- step(m7)
+#No changes
+
+residualPlots( m7)
+marginalModelPlots(m7, id=list(n=5, labels=rownames(df)))
+par(mfrow=c(2,2))
+plot(m7)
+par(mfrow=c(1,1))
+
+```
+
+Adding interactions
+
+```{r}
+m9 <- lm(log(charges) ~  (age +I(age^2) + I(children+0.5)) * (sex + smoker + f.reg + f.bmi), data = df[-llev,])
+summary(m9) #R2: 0.808
+
+residualPlots( m9)
+marginalModelPlots(m9, id=list(n=5, labels=rownames(df)))
+par(mfrow=c(2,2))
+plot(m9)
+par(mfrow=c(1,1))
+
+plot(allEffects(m9))
+
+m10 <- step(m9)
+#lm(formula = log(charges) ~ age + I(age^2) + I(children + 0.5) + sex + smoker + f.reg + f.bmi + age:sex + age:smoker + age:f.reg + age:f.bmi + I(age^2):smoker + I(children + 0.5):smoker, data = df[-llev, ])
+
+AIC(m10,m9,m7)
+
+summary(m10) #R2 : 0.8071
+marginalModelPlots(m10)
+par(mfrow=c(2,2))
+plot(m10)
+par(mfrow=c(1,1))
+
+plot(allEffects(m10))
+
+```
+
+Residual Analysis and Validation
+
+```{r}
+residualPlots(m10)
+influencePlot(m10)
+#There are no significant cooks distances
+```
