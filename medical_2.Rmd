@@ -53,6 +53,8 @@ nrow(df)
 
 ## Check Data Types
 
+The columns sex, smoker and region were casted to factors.
+
 ```{r}
 lapply(df, class)
 categ_cols <- c( 'sex', 'smoker', 'region')
@@ -62,6 +64,8 @@ lapply(df, class)
 ```
 
 ## Univariate Outliers
+
+To detect outliers it was decided to check both mild and severe outliers, as it is shown in the boxlpot, the green line show the mild and the red show the severe outliers. Finally it was decided to cast the severe as NA, to be treaten after.
 
 ```{r}
 par(mfrow=c(1,2))
@@ -131,6 +135,8 @@ summary(df$charges)
 
 ## Treating missing data
 
+Checking the missing data, it was seen that the only column with missing data was charges (the oultliers casted before). Those values can't be imputed because it is the target variable, so they were deleted.
+
 ```{r}
 mis_col = colSums(is.na(df))
 mis_col
@@ -147,8 +153,9 @@ nrow(df)
 
 ## Multivariate Outliers
 
+It was decided to use Mahalanobis distance to detect the multivariate outliers, getting only one, and it was deleted.
+
 ```{r}
-library(chemometrics)
 res.mout <- Moutlier( df[ , c(1,3,4,7)], quantile = 0.999 )
 
 par(mfrow=c(1,1))
@@ -169,7 +176,6 @@ df <- df[-llmout,]
 
 ```{r}
 summary(df)
-
 ```
 
 # Second part
@@ -253,20 +259,78 @@ res.con$quali
 res.con$category
 ```
 
-## Model
+Checking the relation of charges with the other numerical variables by using graphics:
 
-First with only the numerical variables
+-   With age it can be seen that there seems to be three patterns, but all of them follow a exponential increase, with only the difference that each pattern has a different domain in charges.
+
+-   With bmi it can bee seen that there is no clear pattern, but it can be seen that there are higher charges (\>30000) more frequently in cases where the bmi is higher than 30
+
+-   With children there is no clear pattern, only that there are higher charges for people with less than 3 children than the ones with 4 or 5
 
 ```{r}
-
-#First we check if there is any likely relation with any variable
 par( mfrow = c(2,2))
 plot(df$charges ~ df$age)
 plot(df$charges ~ df$bmi)
 plot(df$charges ~ df$children)
 par( mfrow = c(1,1))
 
-#It seems that with age there might be and slight cuadratic relation
+```
+
+Checking the relation of charges with the other categorical variables by using graphics:
+
+-   With sex seems to not be any significative differences between sex, only that the charges for the 3rd Qu. of male is higher than the female one.
+
+-   With smoker it can be seen that there is a significant difference in charges depending on this variable, if the person smokes it tends to get higher charges. So this variable is going to be impactful to charges.
+
+-   With region eems to not be any significative differences between them
+
+```{r}
+par( mfrow = c(2,2))
+plot(df$charges ~ df$sex)
+tapply(df$charges, df$sex, summary)
+plot(df$charges ~ df$smoker)
+tapply(df$charges, df$smoker, summary)
+plot(df$charges ~ df$region)
+tapply(df$charges, df$region, summary)
+par( mfrow = c(1,1))
+```
+
+Checking the relation of charges with the interaction of other variables:
+
+-   With this plots it can be confirmed that smoker affects every variable, because its combination with any numerical variable affects the charges, because all the higher charges are associated with the people being smokers
+
+-   Sex and region does not have impact in the charges despite combining it with the other numerical variables
+
+-   In the graphic of charges \~ age coloring by smoker it can bee seen that the three patterns previously detected are affected, one pattern (less charges) is only for none smokers, the mid one is a mix of smokers and none smokers, and the higher one is only smokers
+
+```{r}
+ggplot(df, aes(x=age , y = charges, color = smoker)) + geom_point()
+ggplot(df, aes(x=age , y = charges, color = sex)) + geom_point()
+ggplot(df, aes(x=age , y = charges, color = region)) + geom_point()
+
+ggplot(df, aes(x=bmi , y = charges, color = smoker)) + geom_point()
+ggplot(df, aes(x=bmi , y = charges, color = sex)) + geom_point()
+ggplot(df, aes(x=bmi , y = charges, color = region)) + geom_point()
+
+ggplot(df, aes(x=children , y = charges, color = smoker)) + geom_point()
+ggplot(df, aes(x=children , y = charges, color = sex)) + geom_point()
+ggplot(df, aes(x=children , y = charges, color = region)) + geom_point()
+
+```
+
+##### Conclusions
+
+-   The variable age has three cuadratic patterns in terms of charges
+
+-   The variable smoke is of high impact to charges, if the people smokes it tends to have higher charges
+
+## Model
+
+First with only the numerical variables
+
+```{r}
+
+
 m0a1 <- lm(charges ~ age, data = df)
 summary(m0a1)
 plot(df$charges ~ df$age)
@@ -386,12 +450,11 @@ length(df[,1])
 length(df[-resout,1])
 ```
 
-
 Residual Outliers
+
 ```{r}
 
 ```
-
 
 Adding factors
 
