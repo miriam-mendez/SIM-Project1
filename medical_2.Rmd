@@ -24,18 +24,17 @@ package.check <- lapply(requiredPackages, FUN = function(x) {
 
 ```
 
-*Reading Data*
+
+# Data Preparation
+We load the dataset, we view the data and we take a look to the statistical summary to check that there no were structural errors and all the data had been read correctly. 
 
 ```{r}
 df <- read.csv("insurance.csv")
-summary(df)
-
 #View(df)
+summary(df)
 ```
 
-# Data Preparation
-
-## Remove duplicates
+## Removing duplicates
 
 ```{r}
 df[duplicated(df), ]
@@ -45,15 +44,8 @@ df <- df[!duplicated(df), ]
 nrow(df)
 ```
 
-## Fixing Structural Errors
-
-```{r}
-
-```
-
-## Check Data Types
-
-The columns sex, smoker and region were casted to factors.
+## Checking Data Types
+We check the data types of all the features and we casted sex, smoker and region to factors.
 
 ```{r}
 lapply(df, class)
@@ -173,6 +165,7 @@ df <- df[-llmout,]
 ```
 
 ## Data Validation
+All the data seems correct,((((REVIEW)))) although we have realized that the bmi values are very high, we have decided to leave them be since they could be possible ((((())))), thus we haven't need to imputate anything.
 
 ```{r}
 summary(df)
@@ -181,6 +174,8 @@ summary(df)
 # Second part
 
 ## Create factors for qualitative variables [Done]
+
+((())) Done in the pre-processing (((())))
 
 ```{r}
 summary(df)
@@ -207,7 +202,6 @@ shapiro.test(log(df$charges))
 
 ```
 
-It does not have an acceptable normal distribution. Most of the individuals spend between \$0 and \$15,000 on health insurance, although the tail of the distribution extends far these peaks.
 
 ## Address test to discard serial correlation [Done]
 
@@ -223,25 +217,25 @@ dwtest(df$charge ~ 1)
 
 ```
 
-The autocorrelation is significantly different from zero at 5% level and we can see that there are periods of low and high variance.
-
 ## Detect univariant and multivariant outliers [Done]
 
 Done in the preprocessing
 
 ## Preliminary exploratory analysis [Done]
 
-Non of the correlations in the matrix are considered strong, whereas all have a positive correlation, meaning that as *feature 1* increase, *feature 2* also increase.
+First of all, we studied the correlations and non of them were considered strong, nevertheless all had a positive correlation, meaning that as *feature 1* increase, *feature 2* also increase.
 
-In these scatter plots we have found interesting relationships between:
+Secondly, in these scatter plots we found interesting relationships between:
 
 -   *age* and *charges* : displays several relatively straight lines.
 
 -   *bmi* and *charges*: has two distinct groups of points.
 
 ```{r}
+scatterplotMatrix(~df$charges + df$bmi + df$age + df$children) # p.79
+
 cor(df[c(7,1,3,4)])
-pairs.panels(df[c(7,1,3,4)])
+# pairs.panels(df[c(7,1,3,4)])
 plot(df[c(7,1,3,4)])
 ```
 
