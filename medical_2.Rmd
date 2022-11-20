@@ -5,7 +5,7 @@ date: \today
 output: pdf_document
 subtitle: "Medical cost"
 editor_options: 
-  chunk_output_type: inline
+  chunk_output_type: console
 ---
 
 ```{r, include=FALSE}
@@ -58,18 +58,17 @@ sapply(df, class)
 To detect outliers it was decided to check both mild and severe outliers, as it is shown in the boxlpot, the green line show the mild and the red show the severe outliers. Finally it was decided to cast the severe as NA, to be treaten after.
 
 ```{r, echo=TRUE}
+par(mfrow=c(1,4))
+
+Boxplot(df$bmi) #bmi  seem to have outliers
+Boxplot(df$charges) #charges seem to have outliers
+Boxplot(df$children) #Children no outliers
+Boxplot(df$age) #Age no outliers
+
+
 par(mfrow=c(1,2))
 
-Boxplot(df[,c(1,3,4)])
-#Age no outliers
-#Children no outliers
-
-Boxplot(df$bmi)
-Boxplot(df$charges)
-#bmi and charges seem to have outliers
-
 #Checking outliers for bmi
-
 ss<-summary(df$bmi);
 # Upper/lower severe threshold
 utso2<-ss[5]+3*(ss[5]-ss[2]);
@@ -78,8 +77,7 @@ utsi2<-ss[2]-3*(ss[5]-ss[2]);
 utmo2<-ss[5]+1.5*(ss[5]-ss[2]); 
 utmi2<-ss[2]-1.5*(ss[5]-ss[2]); 
 
-Boxplot(df$bmi,id=list(n=Inf,labels=row.names(df)))
-Boxplot(df$bmi)
+Boxplot(df$bmi, main="Checking outliers for bmi")
 abline(h=utso2,col="red",lwd=3)
 abline(h=utsi2,col="red",lwd=3)
 abline(h=utmo2,col="green",lwd=3)
@@ -89,8 +87,6 @@ lls.bmi<-which((df$bmi>utso2)|(df$bmi<utsi2));
 
 llm.bmi<-which((df$bmi>utmo2)|(df$bmi<utmi2));
 
-
-par(mfrow=c(1,1))
 
 #Checking outliers for charges
 
@@ -102,8 +98,7 @@ utsi2<-ss[2]-3*(ss[5]-ss[2])
 utmo2<-ss[5]+1.5*(ss[5]-ss[2])
 utmi2<-ss[2]-1.5*(ss[5]-ss[2]);
 
-Boxplot(df$charges,id=list(n=Inf,labels=row.names(df)))
-Boxplot(df$charges)
+Boxplot(df$charges, main = "Checking outliers for charges" )
 abline(h=utso2,col="red",lwd=3)
 abline(h=utsi2,col="red",lwd=3)
 abline(h=utmo2,col="green",lwd=3)
@@ -113,8 +108,6 @@ lls<-which((df$charges>utso2)|(df$charges<utsi2));
 
 llm<-which((df$charges>utmo2)|(df$charges<utmi2));
 
-
-par(mfrow=c(1,1))
 
 #Setting severe outliers from charges as NA
 
@@ -231,7 +224,6 @@ Secondly, in these scatter plots we found interesting relationships between:
 ```{r}
 cor(df[c(7,1,3,4)])
 pairs.panels(df[c(7,1,3,4)])
-plot(df[c(7,1,3,4)])
 ```
 
 Also checking the condes() function, we can see the following:
