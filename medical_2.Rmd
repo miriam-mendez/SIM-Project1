@@ -1,10 +1,12 @@
 ---
 title: "SIM - Assignment 1"
 author: "Míriam Méndez, Gabriel Zarate"
-date: \today
-output: pdf_document
-subtitle: "Medical cost"
-editor_options: 
+date: "\today"
+output:
+  pdf_document: default
+  word_document: default
+subtitle: Medical cost
+editor_options:
   chunk_output_type: console
 ---
 
@@ -20,11 +22,12 @@ package.check <- lapply(requiredPackages, FUN = function(x) {
   }
 })
 
+require(gridExtra)
 ```
 
-
 # Data Preparation
-We load the dataset, we view the data and we take a look to the statistical summary to check that there no were structural errors and all the data had been read correctly. 
+
+We load the dataset, we view the data and we take a look to the statistical summary to check that there no were structural errors and all the data had been read correctly.
 
 ```{r}
 df <- read.csv("insurance.csv")
@@ -36,17 +39,14 @@ summary(df)
 
 ```{r}
 df[duplicated(df), ]
-nrow(df)
-
-df <- df[!duplicated(df), ]
-nrow(df)
+df <- df[!duplicated(df),]
 ```
 
 ## Checking Data Types
+
 We check the data types of all the features and we casted sex, smoker and region to factors.
 
 ```{r}
-sapply(df, class)
 categ_cols <- c( 'sex', 'smoker', 'region')
 df[categ_cols] = lapply(df[categ_cols], FUN = as.factor)
 sapply(df, class)
@@ -58,12 +58,11 @@ sapply(df, class)
 To detect outliers it was decided to check both mild and severe outliers, as it is shown in the boxlpot, the green line show the mild and the red show the severe outliers. Finally it was decided to cast the severe as NA, to be treaten after.
 
 ```{r, echo=TRUE}
-par(mfrow=c(1,4))
+par(mfrow=c(2,2))
 Boxplot(df$bmi) #bmi  seem to have outliers
 Boxplot(df$charges) #charges seem to have outliers
 Boxplot(df$children) #Children no outliers
 Boxplot(df$age) #Age no outliers
-
 
 par(mfrow=c(1,2))
 #Checking outliers for bmi
@@ -74,7 +73,7 @@ utsi2<-ss[2]-3*(ss[5]-ss[2]);
 # Upper/lower mild threshold
 utmo2<-ss[5]+1.5*(ss[5]-ss[2]); 
 utmi2<-ss[2]-1.5*(ss[5]-ss[2]); 
-Boxplot(df$bmi, main="Checking outliers for bmi")
+Boxplot(df$bmi, main="bmi")
 abline(h=utso2,col="red",lwd=3)
 abline(h=utsi2,col="red",lwd=3)
 abline(h=utmo2,col="green",lwd=3)
@@ -91,18 +90,16 @@ utsi2<-ss[2]-3*(ss[5]-ss[2])
 # Upper/lower mild threshold
 utmo2<-ss[5]+1.5*(ss[5]-ss[2])
 utmi2<-ss[2]-1.5*(ss[5]-ss[2]);
-Boxplot(df$charges, main = "Checking outliers for charges" )
+Boxplot(df$charges, main = "charges" )
 abline(h=utso2,col="red",lwd=3)
 abline(h=utsi2,col="red",lwd=3)
 abline(h=utmo2,col="green",lwd=3)
 abline(h=utmi2,col="green",lwd=3)
-lls<-which((df$charges>utso2)|(df$charges<utsi2));
-llm<-which((df$charges>utmo2)|(df$charges<utmi2));
-
+lls<-which((df$charges>utso2)|(df$charges<utsi2))
+llm<-which((df$charges>utmo2)|(df$charges<utmi2))
 
 #Setting severe outliers from charges as NA
 df[lls,"charges"]<-NA
-summary(df$charges)
 ```
 
 ## Treating missing data
@@ -112,9 +109,8 @@ Checking the missing data, it was seen that the only column with missing data wa
 ```{r}
 mis_col = colSums(is.na(df)); mis_col
 
-md<-which(is.na(df$charges));md
+md<-which(is.na(df$charges))
 df <- df[-md,]
-# nrow(df)
 ```
 
 ## Multivariate Outliers
@@ -138,7 +134,8 @@ df <- df[-llmout,]
 ```
 
 ## Data Validation
-All the data seems correct,((((REVIEW)))) although we have realized that the bmi values are very high, we have decided to leave them be since they could be possible ((((())))), thus we haven't need to imputate anything.
+
+After checking all the columns of the data that there were no major mistakes in the dataset to be corrected, despite of finding some atypical cases that were decided to keep because they were probable in extreme cases.
 
 ```{r, include=FALSE}
 summary(df)
@@ -165,18 +162,15 @@ par(mfrow=c(2,2))
 #Normal Check
 hist(df$charges, freq=F, main="charges")
 curve(dnorm(x,mean(x),sd(x)),lwd=2,add=T,col="red")
-
 #Log normal check
 hist(log(df$charges), freq=F, main="charges")
 curve(dnorm(x,mean(x),sd(x)),lwd=2,add=T,col="red")
-
 shapiro.test(df$charges)
 shapiro.test(log(df$charges))
 
 ```
 
-
-## Address test to discard serial correlation 
+## Address test to discard serial correlation
 
 By using the acf() method to plot the autocorrelation in charges, it can be seen that there is no serial correlation in it. Also the Durbin-Watson Test was realized, and it gets a p-value = 0.53, so the H0 fails to be rejected, so it can be said that there is no autocorrelation present in charges.
 
@@ -188,8 +182,7 @@ acf(df$charges)
 dwtest(df$charge ~ 1)
 ```
 
-
-## Preliminary exploratory analysis 
+## Preliminary exploratory analysis
 
 First of all, we studied the correlations and non of them were considered strong, nevertheless all had a positive correlation, meaning that as *feature 1* increase, *feature 2* also increase.
 
@@ -240,9 +233,9 @@ Checking the relation of charges with the other categorical variables by using g
 
 -   With smoker it can be seen that there is a significant difference in charges depending on this variable, if the person smokes it tends to get higher charges. So this variable is going to be impactful to charges.
 
--   With region eems to not be any significative differences between them
+-   With region seems to not be any significative differences between them
 
-```{r}
+```{r,results='hide',fig.keep='all'}
 par( mfrow = c(2,2))
 plot(df$charges ~ df$sex)
 tapply(df$charges, df$sex, summary)
@@ -261,7 +254,7 @@ Checking the relation of charges with the interaction of other variables:
 -   In the graphic of charges \~ age coloring by smoker it can bee seen that the three patterns previously detected are affected, one pattern (less charges) is only for none smokers, the mid one is a mix of smokers and none smokers, and the higher one is only smokers
 
 ```{r}
-require(gridExtra)
+
 plot1 <- ggplot(df, aes(x=age , y = charges, color = smoker)) + geom_point()
 plot2 <- ggplot(df, aes(x=age , y = charges, color = sex)) + geom_point()
 plot3 <- ggplot(df, aes(x=age , y = charges, color = region)) + geom_point()
@@ -284,105 +277,91 @@ grid.arrange( plot1, plot2,plot3 , ncol=2)
 
 ```
 
-##### Conclusions
+### Conclusions
 
 -   The variable age has three cuadratic patterns in terms of charges
 
 -   The variable smoke is of high impact to charges, if the people smokes it tends to have higher charges
 
-## Model
+# Model
 
-First with only the numerical variables
+## Model with only numerical variables
+
+To start a model with only numerical variables was created. As it was seen in the EDA, age has an strange pattern in terms of charge because it has 3 parabolic lines that has to be converted, so that variable will be the main focus. So first with the result of the boxcox graphic it was decided to transform charges to log(charges) because lambda was near 0. Then boxTidwell was applied, getting that lambda for age was 0.5, so an squared root transformation was suggested. To confirm that three models were developed, one was with a polynomic approach for age, the second similar to the fist one but only keeping the quadratic form of age and a third one with the squared root of age. Finally comparing them by BIC it was decided to keep m3, that has R2 = 0.30847.
 
 ```{r}
 m0 <- lm(charges ~ age + bmi + children , data = df)
 summary(m0)
-residualPlots( m0, id=list(n=5, labels=rownames(df)))
-marginalModelPlots(m0, id=list(n=5, labels=rownames(df)))
-
-#The intercept is difficult to interpret because it is impossible to have 0's for all values
 par( mfrow = c(2,2))
 plot(m0, id.n = 0)
 
+#The intercept is difficult to interpret because it is impossible to have 0's for all values
+
 par( mfrow = c(1,1))
-vif(m0) #Variance inflation factor
-boxcox( charges ~ age + bmi + children , data=df) #lambda = 0
-boxTidwell( charges ~ age + bmi + I(children+0.5) , data=df) #lambda age = 1.8
+boxcox( charges ~ age + bmi + children , data=df) #lambda = 0 so we transform charges with log
 boxTidwell( log(charges) ~ age + bmi + I(children+0.5) , data=df) #lambda age = 0.5
 
-# First we will try the polinomic convertion with age
+# First we will try a polinomic convertion with age
 m1 <- lm(log(charges) ~ age + I(age^2) + bmi + I(children+0.5) , data = df)
-summary(m1) # R2 = 0.3081
+#summary(m1) # R2 = 0.3081
 
 m2 <- lm(log(charges) ~  I(age^2) + bmi + I(children+0.5) , data = df)
-summary(m2) #R2 = 0.2946
+#summary(m2) #R2 = 0.2946
 
 m3 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) , data = df)
 summary(m3) #R2 = 0.3085
 
 anova(m2,m1) # models are not equivalent
 
-AIC(m3,m2,m1, k=log(nrow(df))) #m3 has the best AIC (3045.722)
-
-#So until now we keep m3, that has R2 =  0.30847
+AIC(m3,m2,m1, k=log(nrow(df))) #m3 has the best BIC (3071.687)
 
 ```
 
-Now we check influential Data
+## Influential data and residual outliers
 
-Apriori influent data
+### Apriori influent data
+
+The hat values were used to check the model leverage, and the threshold used was 2\*p/n because this is an small dataset, so a new model was generated without those values just to check the impact, and it was decided to don't do nothing with them.
 
 ```{r}
-
-residualPlots( m1, id=list(n=5, labels=rownames(df)))
-marginalModelPlots(m1, id=list(n=5, labels=rownames(df)))
-
-#we use 2 because it is a small dataset
-llev <- which( hatvalues(m1) > 2*(length(coef(m1))/nrow(df)));llev
+llev <- which( hatvalues(m1) > 2*(length(coef(m1))/nrow(df)))
 length(llev)
 
 #We try a model without those values only to check, but it won't be kept
 m3 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) , data = df[-llev,])
-summary(m3) # R2 = 0.3051
-
-residualPlots(m3)
-marginalModelPlots(m3, id=list(n=5, labels=rownames(df)))
-
+#summary(m3) # R2 = 0.3051
 ```
 
-Aposteriori influent data
+### Aposteriori influent data
+
+To check the actual influent data it was decided to use the Chatterjee-Hadi's threshold, to trim the outliers in the cook distances of the model. And it was decided that from now on all the models would not use those values.
 
 ```{r}
-# Threshold Chatterjee-Hadi
-thChH <- 4/ (nrow(df) - length(coef(m1)));thChH
 
 par(mfrow=c(1,1))
 influencePlot(m1)
+
+# Threshold Chatterjee-Hadi
+thChH <- 4/ (nrow(df) - length(coef(m1)));thChH
 
 #Actual influent data Cook´s distance: outliers in cook´s distance
 Boxplot(cooks.distance(m1))
 abline(h=thChH,col="red",lwd=3)
 
-resout <- which( cooks.distance(m1) > thChH);resout
-length(resout)
+resout <- which( cooks.distance(m1) > thChH)
+# length(resout) #78
 
 # We try a model with no Cook's distance outliers
 m4 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) , data = df[-resout,])
+
 summary(m4) # R2 = 0.513
 residualPlots( m4)
 marginalModelPlots(m4, id=list(n=5, labels=rownames(df)))
-
-length(df[,1])
-length(df[-resout,1])
 ```
 
-Residual Outliers
+## Adding factors
 
-```{r}
-
-```
-
-Adding factors
+After adding the factors to the models, it was seen that all the variables were significant to charges, so all of them were kept. Region was tested because it was multiclass but with the anova it was seen that the models with and without this variable were not equivalent so it can not be deleted.
 
 ```{r}
 names(df)
@@ -400,35 +379,34 @@ m7 <- step( m6, k=log(nrow(df)))
 #Step doesn't show any variable that can be deleted
 
 #But we try a model without region, because it is a multiclass
-m6reg <- lm(log(charges) ~   sqrt(age) + bmi + I(children+0.5) + sex + smoker,  data = df[-resout,])
-summary(m6reg) 
+m6reg <- lm(log(charges) ~sqrt(age) + bmi + I(children+0.5) + sex + smoker,  data = df[-resout,])
+#summary(m6reg) 
 
 anova(m6reg, m6)
 #Ho rejected, so models are not equivalent, so we can not delete region
 
 ```
 
-Redefining factors
+### Redefining factors
+
+The variables region and bmi were candidates to be redefined, region because it has 4 categories, so it was wanted to be reduced to 2, and bmi because there was a pattern with it:
+
+-   region: According to the distributions by each group the south seems to have a common distribution by checking the min value, the median and the max, and the same with the north, so we will group them by north and south
+
+-   bmi: In the distribution of charges, the 3rd Qu. IS 16390, so above that we can consider expensive charges, so we decided to draw a line in charges of 30000, almost the double of the 3rd Qu. and it can be seen that approximately in bmi's higher than 30 it starts to be more frequent, so it was finally decided to create a factor that indicates if the individual has a bmi higher or equal than 30 or not
 
 ```{r}
 
-#First we check how to regroup region
+#region
 plot(df$charges ~ df$region)
 tapply(df$charges, df$region, summary)
-
-#According to the distributions by each group the south seems to have a common distribution by checking the min value, the median and the max, and the same with the north, so we will group them by north and south
 
 df$f.reg<-0
 ll<-which(df$region %in% c("northeast","northwest"))
 df$f.reg[ll]<-1
 df$f.reg <- factor( df$f.reg, labels=c("south","north"))
 
-table(df$region)
-table(df$f.reg)
-
-
-#Also it was decided to check bmi to see if it can become a factor
-
+#bmi
 summary(df$bmi)
 summary(df$charges)
 
@@ -436,26 +414,26 @@ plot(df$charges ~ df$bmi)
 abline( h=30000, lwd=2, col="red")
 abline( v=30, lwd=2, col="red")
 
-#As we can see in the distribution ob charges, the 3rd Qu. IS 16390, so above that we can consider expensive charges, so we decided to draw a line in charges of 30000, almost the double of the 3rd Qu. and it can be seen that approximately in bmi's higher than 30 it starts to be more frequent, so it was finally decided to create a factor that indicates if the individual has a bmi higher or equal than 30 or not
-
 df$f.bmi<-0
 ll<-which(df$bmi >= 30)
 df$f.bmi[ll]<-1
 df$f.bmi <- factor( df$f.bmi, labels=c("<30",">=30"))
-
 ```
 
-Recalculate the model
+## Recalculate the model
+
+The impact of the new factors was tested in two new models, one using only the new region and other using the new region and bmi, and comparing the BIC'S the result was that the best model was the one with only the new region.
 
 ```{r}
 
 #Checking the change only in region
-m8 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-resout,])
-summary(m8) #R2 = 0.8264
+m8 <- lm(log(charges) ~  sqrt(age) + bmi + I(children+0.5) + sex + smoker + f.reg,
+data = df[-resout,])
+#summary(m8) #R2 = 0.8264
 
 #Checking the change in region and in bmi
 m9 <- lm(log(charges) ~  sqrt(age) + f.bmi + I(children+0.5) + sex + smoker + f.reg, data = df[-resout,])
-summary(m9) #R2 = 0.8261
+#summary(m9) #R2 = 0.8261
 
 AIC(m9,m8,m7, k=log(nrow(df)))
 
@@ -464,49 +442,70 @@ AIC(m9,m8,m7, k=log(nrow(df)))
 m10<- step(m9, k=log(nrow(df)))
 #No changes
 
-residualPlots( m9)
-marginalModelPlots(m9, id=list(n=5, labels=rownames(df)))
-par(mfrow=c(2,2))
-plot(m9)
-par(mfrow=c(1,1))
-
 ```
 
-Adding interactions
+## Adding interactions
+
+After adding the interactions and applying and step to delete the non significant interactions a final model was obtained. In that model's summary it was checked that the p-value of bmi was 0.57, so it was tested if it could be deleted, but by comparing the R2 and the BIC it didn't improved, so it was kept.
 
 ```{r}
 m11 <- lm(log(charges) ~  (sqrt(age) +bmi+ I(children+0.5)) * (sex + smoker + f.reg), data = df[-resout,])
-summary(m11) #R2 = 0.8643
-
-residualPlots( m11)
-marginalModelPlots(m11, id=list(n=5, labels=rownames(df)))
-par(mfrow=c(2,2))
-plot(m11)
-par(mfrow=c(1,1))
-
-plot(allEffects(m11))
+#summary(m11) #R2 = 0.8643
 
 m12 <- step(m11, k=log(nrow(df)))
 summary(m12) # R2 = 0.8632
 
-#lm(formula = log(charges) ~ sqrt(age) + bmi + I(children + 0.5) + sex + smoker + f.reg + sqrt(age):sex + sqrt(age):smoker + sqrt(age):f.reg + bmi:smoker + data = df[-resout, ])
+#lm(formula = log(charges) ~ sqrt(age) + bmi + I(children + 0.5) + sex + smoker + f.reg + sqrt(age):sex + sqrt(age):smoker + sqrt(age):f.reg + bmi:smoker + I(children + 0.5):smoker, data = df[-resout, ])
 
-AIC(m12,m11, k=log(nrow(df)))
+m13 <-lm(formula = log(charges) ~ sqrt(age)  + I(children + 0.5) + sex + smoker + f.reg + sqrt(age):sex + sqrt(age):smoker + sqrt(age):f.reg + bmi:smoker + I(children + 0.5):smoker, data = df[-resout, ])
+#summary(m13)
 
-marginalModelPlots(m12)
-par(mfrow=c(2,2))
-plot(m12)
-par(mfrow=c(1,1))
-
-plot(allEffects(m12))
+AIC(m13,m12,m11, k=log(nrow(df)))
 
 ```
 
-Residual Analysis and Validation
+### Residual Analysis and Validation
+
+To validate the final model the influencePlot was checked, and there were two values with hatvalues higher than the threshold, so a model was generated excluding them, and getting no real improvement
 
 ```{r}
-residualPlots(m12)
 influencePlot(m12)
-#There are no significant cooks distances
+
+# Threshold for Hatvalues
+2*(length(coef(m12))/nrow(df))
+
+#There are two values with hat values higher than the threshold so a model without them was decided to be tested
+
+hh <- which(rownames(df) %in% c("65", "1086"));
+
+m13<- lm(formula = log(charges) ~ sqrt(age) + bmi + I(children + 0.5) + sex + smoker + f.reg + sqrt(age):sex + sqrt(age):smoker + sqrt(age):f.reg + bmi:smoker + I(children + 0.5):smoker, data = df[- c(resout,hh), ])
+
+m14 <- step(m13, k=log(nrow(df)))
+#summary(m14)
+
+```
+
+## Final results and conclusions
+
+-   The final model was the one obtained after executing the step after adding the interactions and the final dataset was trimmed, deleting the influential data based on its cook's distance.
+
+-   Age negatively affects the model because of how it is distributed in the three patterns previously discussed
+
+-   The final model does not achieve the get a fully Normal Q-Q plot, this could happen because in the residual vs fitted graph there is still a pattern, with that in mind it can be concluded that there is still a small pattern in the residuals that could not be identified
+
+-   Smoker is an important variable that highly affects the charges variable, if the person smokes, the charges tends to increase, despite the other characteristics, this can be confirmed in the allEffects plots
+
+-   In the Marginal Model Plots the patterns are very accurate in all the numeric variables having only an slightly difference in age, this tells us that there might be the problem and there can be a patter in its residuals
+
+```{r}
+
+model<- lm(formula = log(charges) ~ sqrt(age) + bmi + I(children + 0.5) + sex + smoker + f.reg + sqrt(age):sex + sqrt(age):smoker + sqrt(age):f.reg + bmi:smoker + I(children + 0.5):smoker, data = df[- resout, ])
+
+summary(model)
+marginalModelPlots(model)
+par(mfrow=c(2,2))
+plot(model)
+par(mfrow=c(1,1))
+plot(allEffects(model))
 
 ```
